@@ -438,8 +438,8 @@ footer{text-align:center;padding:16px;font-size:11px;color:var(--muted);border-t
     <div class="pub-badge" id="pubBadge"></div>
   <div class="h-btns">
     
-    
-    
+    <button class="btn-share" onclick="generateShareFile()">🔗 Share</button>
+    <button class="btn-export" onclick="window.print()">⬇ Export PDF</button>
   </div>
   </div>
 </header>
@@ -584,7 +584,50 @@ footer{text-align:center;padding:16px;font-size:11px;color:var(--muted);border-t
     </div>
   </section>
 
-  <section><div class="sec-label">Project Portfolio · Read-Only</div><div style="padding:24px;background:var(--surface);border:1px solid var(--border);border-radius:12px;text-align:center;color:var(--muted)"><p>📊 This is a summary view of the portfolio. For detailed project management, use the private dashboard.</p></div></section>
+  <section>
+    <div class="sec-label">Project Portfolio</div>
+    <div class="table-card">
+      <div class="t-toolbar">
+        <button class="f-btn on" onclick="filterTable('all',this)">All</button>
+        <button class="f-btn" onclick="filterTable('layout',this)">Layout Only</button>
+        <button class="f-btn" onclick="filterTable('simulation',this)">PVsyst &amp; CAPEX</button>
+        <button class="f-btn" onclick="filterTable('engineering',this)">Detail Eng.</button>
+        <span class="t-count" id="tCount"></span>
+        <input class="t-search" type="text" placeholder="Search project or client…" oninput="searchTable(this.value)">
+        <button class="btn-add" onclick="openModal()">＋ Add Project</button>
+      </div>
+      <div class="t-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th onclick="sortTable(0)">Project ↕</th>
+              <th onclick="sortTable(1)">Client ↕</th>
+              <th onclick="sortTable(2)">Year ↕</th>
+              <th onclick="sortTable(3)">Capacity ↕</th>
+              <th onclick="sortTable(4)">MWh/yr ↕</th>
+              <th onclick="sortTable(5)">PR % ↕</th>
+              <th onclick="sortTable(6)">ROI ↕</th>
+              <th onclick="sortTable(7)">CAPEX / Revenue ↕</th>
+              <th onclick="sortTable(8)">NPV ↕ <span style='font-size:9px;color:#6E88A8' title='Net Present Value at 25% TIR'>ℹ</span></th>
+              <th onclick="sortTable(9)" title="Levelized Cost of Energy&#10;Formula: (CAPEX + OPEX×AF) / (MWh×AF×1000)&#10;Assumptions: r=10%, n=25yr, OPEX=1.5%/yr">LCOE ↕ <span style='font-size:9px;color:#6E88A8'>ℹ</span></th>
+              <th onclick="sortTable(9)">Layout ↕</th>
+              <th onclick="sortTable(10)">PVsyst &amp; CAPEX ↕</th>
+              <th onclick="sortTable(11)">Detail Eng. ↕</th>
+              <th onclick="sortTable(12)">Status ↕</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="tBody"></tbody>
+        </table>
+      </div>
+    </div>
+      <div style="padding:10px 18px 12px;font-size:10px;color:var(--muted);border-top:1px solid var(--border);background:var(--bg)">
+        <strong>LCOE:</strong> r=<span id="lcoe-r-label">10%</span> · n=<span id="lcoe-n-label">25</span>yr · OPEX=<span id="lcoe-opex-label">1.5%</span>/yr &nbsp;|&nbsp; <strong>NPV:</strong> TIR=25% · Tariff=<span id="npv-tariff-label">1,100</span> COP/kWh · Lifetime=25yr &nbsp;|&nbsp; Requires CAPEX + MWh/yr
+        &nbsp;&nbsp;
+        <a href="#" onclick="editLCOEAssumptions(event)" style="color:var(--n500);font-weight:600;text-decoration:none">Edit assumptions ›</a>
+      </div>
+    </div>
+  </section>
 
   <section>
     <div class="sec-label">CV-Ready Bullets · Click to copy · Auto-updates with your data</div>
@@ -615,6 +658,722 @@ footer{text-align:center;padding:16px;font-size:11px;color:var(--muted);border-t
 
 <footer>PV Engineering Portfolio · Data from Projects_Data tracker · CAPEX in M COP · NPV: TIR <span id="footer-tir">25</span>% · Tariff <span id="footer-tariff">1,100</span> COP/kWh · 2025–2026</footer>
 <div id="toast">✓ Copied</div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modalOverlay" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modalTitle">＋ Add New Project</div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <form id="addForm" onsubmit="saveProject(event)">
+      <input type="hidden" id="f-idx" value="-1">
+      <div class="form-grid">
+        <div class="form-group full">
+          <label class="form-label">Project Name *</label>
+          <input class="form-input" id="f-name" type="text" placeholder="e.g. Bavaria Bogotá Plant" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Client *</label>
+          <input class="form-input" id="f-client" type="text" placeholder="e.g. Bavaria" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Year *</label>
+          <input class="form-input" id="f-year" type="number" min="2020" max="2035" placeholder="2026" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Capacity (MWp)</label>
+          <input class="form-input" id="f-mw" type="number" step="0.0001" placeholder="e.g. 0.500">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Annual Energy (MWh/yr)</label>
+          <input class="form-input" id="f-mwh" type="number" step="0.1" placeholder="e.g. 650.0">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Performance Ratio (%)</label>
+          <input class="form-input" id="f-pr" type="number" step="0.1" min="0" max="100" placeholder="e.g. 77.5">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Payback / ROI (years)</label>
+          <input class="form-input" id="f-roi" type="number" step="0.1" min="0" placeholder="e.g. 3.2">
+        </div>
+        <div class="form-group">
+          <label class="form-label">CAPEX (M COP)</label>
+          <input class="form-input" id="f-capex" type="number" step="1" placeholder="e.g. 850">
+          <span class="form-hint">Enter in millions of COP (e.g. 850 = $850M COP)</span>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Client Status *</label>
+          <select class="form-select" id="f-status" required>
+            <option value="pending">● Pending — Under review</option>
+            <option value="approved">✔ Approved — Contract signed</option>
+            <option value="declined">✕ Declined — Did not proceed</option>
+          </select>
+        </div>
+        <div class="form-group full">
+          <label class="form-label" style="margin-bottom:4px">Activities Completed</label>
+          <div class="act-checks">
+            <label class="act-check-row" id="row-layout">
+              <input type="checkbox" id="f-layout">
+              <span class="act-check-label">Basic Capacity Layout</span>
+              <span class="act-check-sw">AutoCAD</span>
+            </label>
+            <label class="act-check-row" id="row-sim">
+              <input type="checkbox" id="f-sim">
+              <span class="act-check-label">Detail PVsyst &amp; CAPEX Modelling</span>
+              <span class="act-check-sw">PVsyst · Excel</span>
+            </label>
+            <label class="act-check-row" id="row-eng">
+              <input type="checkbox" id="f-eng">
+              <span class="act-check-label">Detail Engineering</span>
+              <span class="act-check-sw">AutoCAD</span>
+            </label>
+          </div>
+        </div>
+      </div>
+      <div class="form-actions">
+        <button type="button" class="btn-delete" id="btnDelete" style="display:none" onclick="deleteProject()">🗑 Delete</button>
+        <button type="button" class="btn-cancel" onclick="closeModal()">Cancel</button>
+        <button type="submit" class="btn-save" id="btnSave">Save Project</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+// ── CO₂ FACTOR (UPME Colombia, Factor de Emisión SIN 2024) ─────────────────
+// Source: UPME Resolución 1198 / XM SA ESP — Factor de emisión red eléctrica Colombia
+// Value: 0.1766 tCO₂/MWh  (marginal factor, most recent official publication)
+const CO2_FACTOR = 0.1766;
+
+// ── PERSISTENCE ───────────────────────────────────────────────────────────────
+const STORAGE_KEY = 'pv_projects_v1';
+function persistProjects() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(projects)); } catch(e) {}
+}
+function loadSavedProjects(defaults) {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) return JSON.parse(saved);
+  } catch(e) {}
+  return defaults;
+}
+
+// ── PROJECT DATA ──────────────────────────────────────────────────────────────
+// Activities: layout=Basic Capacity Layout (AutoCAD), sim=PVsyst+CAPEX (PVsyst+Excel), eng=Detail Engineering (AutoCAD)
+// status: 'pending' | 'approved' | 'declined'
+// capex: millions COP (null if unknown)
+let projects = loadSavedProjects([
+  {name:"Cerveceria Duitama",    client:"Bavaria",           year:2025, mw:1.60,   mwh:null,   pr:null, roi:null, capex:null,   layout:true, sim:false, eng:false, status:"pending"},
+  {name:"Malteria Tibitó",       client:"Bavaria",           year:2025, mw:1.25,   mwh:1510.2, pr:77.8, roi:null, capex:null,   layout:true, sim:true,  eng:true,  status:"approved"},
+  {name:"Planta Atlántico",      client:"Bavaria",           year:2025, mw:9.90,   mwh:13860.0, pr:79.2, roi:null, capex:null,   layout:true, sim:true,  eng:true,  status:"approved"},
+  {name:"Planta la Unión",       client:"Bavaria",           year:2025, mw:3.52,   mwh:null,   pr:null, roi:null, capex:null,   layout:true, sim:false, eng:false, status:"pending"},
+  {name:"Greenearth A",          client:"Greenearth",        year:2025, mw:0.006,  mwh:null,   pr:null, roi:null, capex:null,   layout:true, sim:false, eng:false, status:"pending"},
+  {name:"Greenearth B",          client:"Greenearth",        year:2025, mw:0.078,  mwh:null,   pr:null, roi:null, capex:null,   layout:true, sim:false, eng:false, status:"pending"},
+  {name:"Bavaria Barranquilla",  client:"Bavaria",           year:2026, mw:null,   mwh:null,   pr:null, roi:null, capex:null,   layout:true, sim:true,  eng:true,  status:"approved"},
+  {name:"Aguila Roja",           client:"—",                 year:2025, mw:0.158,  mwh:null,   pr:null, roi:null, capex:null,   layout:true, sim:false, eng:true,  status:"approved"},
+  {name:"Yanbal Sede 1",         client:"Yanbal",            year:2026, mw:0.090,  mwh:100.88, pr:71.8, roi:3.6,  capex:null,   layout:true, sim:true,  eng:false, status:"pending"},
+  {name:"Yanbal Sede 2",         client:"Yanbal",            year:2026, mw:0.338,  mwh:392.6,  pr:75.7, roi:3.3,  capex:null,   layout:true, sim:true,  eng:false, status:"pending"},
+  {name:"D1 Guamal",             client:"D1",                year:2026, mw:0.0925, mwh:114.22, pr:78.9, roi:2.8,  capex:null,   layout:true, sim:true,  eng:true,  status:"approved"},
+  {name:"D1 Villasonia",         client:"D1",                year:2026, mw:0.0375, mwh:54.4,   pr:81.3, roi:null, capex:null,   layout:true, sim:true,  eng:false, status:"pending"},
+  {name:"D1 Alborada",           client:"D1",                year:2026, mw:0.0475, mwh:52.71,  pr:78.6, roi:null, capex:null,   layout:true, sim:true,  eng:false, status:"pending"},
+  {name:"D1 Cedritos",           client:"D1",                year:2026, mw:0.030,  mwh:54.46,  pr:74.2, roi:null, capex:null,   layout:true, sim:true,  eng:true,  status:"approved"},
+  {name:"D1 Balcones",           client:"D1",                year:2026, mw:0.030,  mwh:32.78,  pr:76.3, roi:null, capex:null,   layout:true, sim:true,  eng:false, status:"pending"},
+  {name:"D1 Contador 142",       client:"D1",                year:2026, mw:0.030,  mwh:31.1,   pr:75.6, roi:null, capex:null,   layout:true, sim:true,  eng:false, status:"pending"},
+  {name:"D1 Ferias Occidental",  client:"D1",                year:2026, mw:0.0275, mwh:31.4,   pr:74.9, roi:null, capex:null,   layout:true, sim:true,  eng:false, status:"pending"},
+  {name:"D1 Punto 170",          client:"D1",                year:2026, mw:0.0275, mwh:30.92,  pr:74.4, roi:null, capex:null,   layout:true, sim:true,  eng:false, status:"pending"},
+  {name:"CC Primavera",          client:"C.C. Primavera",    year:2026, mw:null,   mwh:293.9,  pr:80.0, roi:null, capex:null,   layout:true, sim:true,  eng:false, status:"pending"},
+  {name:"CC Vista Hermosa",      client:"C.C. Vista Hermosa",year:2026, mw:0.171,  mwh:241.6,  pr:78.3, roi:null, capex:null,   layout:true, sim:true,  eng:false, status:"pending"},
+  {name:"Coltanques",            client:"Coltanques",        year:2026, mw:0.144,  mwh:218.0,  pr:80.2, roi:null, capex:null,   layout:true, sim:true,  eng:false, status:"pending"},
+  {name:"Casa Punto Ruitoque",   client:"Casa 19 Cibeles",   year:2026, mw:0.005,  mwh:null,   pr:null, roi:null, capex:null,   layout:true, sim:false, eng:true,  status:"approved"},
+]);
+
+let activeFilter='all', searchQ='', sortCol=-1, sortDir=1;
+
+// ── COMPUTED HELPERS ──────────────────────────────────────────────────────────
+function getPhase(p) {
+  if (p.eng)        return 'Detail Engineering';
+  if (p.sim)        return 'PVsyst & CAPEX';
+  if (p.layout)     return 'Layout Only';
+  return 'Not Started';
+}
+
+function fmtCap(v) {
+  if(v==null) return '<span class="td-null">—</span>';
+  return v*1000<100 ? (v*1000).toFixed(1)+'<small> kWp</small>' : (+v).toFixed(2)+'<small> MWp</small>';
+}
+function fmtN(v,d=1) { return v!=null ? (+v).toFixed(d) : '<span class="td-null">—</span>'; }
+function fmtCapex(v) {
+  if(v==null) return '<span class="td-null">—</span>';
+  return v>=1000 ? '$'+(v/1000).toFixed(1)+'B' : '$'+v+'M';
+}
+
+// LCOE = (CAPEX + OPEX_annual × AF) / (MWh_yr × AF × 1000)  → COP/kWh
+// Assumptions: discount rate r=10%, lifetime n=25yr, OPEX=1.5% of CAPEX/yr
+const LCOE_R    = 0.10;   // discount rate
+const LCOE_N    = 25;     // project lifetime (years)
+const LCOE_OPEX = 0.015;  // annual OPEX as % of CAPEX
+const LCOE_AF   = (1 - Math.pow(1 + LCOE_R, -LCOE_N)) / LCOE_R; // annuity factor ≈ 9.077
+
+// ── NPV / PROFITABILITY ───────────────────────────────────────────────────────
+// NPV = -CAPEX + (MWh/yr × 1000 × tariff - OPEX_annual) × AF_TIR
+// Tariff = Colombian commercial electricity price (COP/kWh)
+let NPV_TIR    = 0.25;    // Internal Rate of Return assumption (25%)
+let NPV_N      = 25;      // Project lifetime (years)
+let NPV_TARIFF = 1100;    // Electricity tariff (COP/kWh) — Colombian C&I average
+let NPV_OPEX   = 0.015;   // Annual OPEX as % of CAPEX
+
+function npvAF() { return (1 - Math.pow(1 + NPV_TIR, -NPV_N)) / NPV_TIR; }
+
+function calcNPV(capex_M, mwh_yr) {
+  if (capex_M == null || mwh_yr == null || mwh_yr === 0) return null;
+  const capex       = capex_M * 1e6;                        // COP
+  const revenue_yr  = mwh_yr * 1000 * NPV_TARIFF;          // COP/yr  (energy savings)
+  const opex_yr     = NPV_OPEX * capex;                     // COP/yr
+  const net_cf      = revenue_yr - opex_yr;                 // net annual cash flow
+  const npv         = -capex + net_cf * npvAF();            // COP
+  return npv / 1e6;                                         // → millions COP
+}
+
+function fmtNPV(capex_M, mwh_yr) {
+  const v = calcNPV(capex_M, mwh_yr);
+  if (v == null) return '<span class="td-null">—</span>';
+  const cls = v >= 0 ? 'npv-pos' : 'npv-neg';
+  const sign = v >= 0 ? '+' : '';
+  const abs = Math.abs(v);
+  const str = abs >= 1000 ? (abs/1000).toFixed(1)+'B' : abs.toFixed(0)+'M';
+  return `<span class="${cls}">${sign}${v>=0?'':'-'}$${str} COP</span>`;
+}
+
+function calcLCOE(capex_M, mwh_yr) {
+  if (capex_M == null || mwh_yr == null || mwh_yr === 0) return null;
+  const capex   = capex_M * 1e6;                        // COP
+  const opex_yr = LCOE_OPEX * capex;                    // COP/yr
+  const lcoe    = (capex + opex_yr * LCOE_AF) / (mwh_yr * LCOE_AF * 1000); // COP/kWh
+  return lcoe;
+}
+
+function fmtLCOE(capex_M, mwh_yr) {
+  const v = calcLCOE(capex_M, mwh_yr);
+  if (v == null) return '<span class="td-null">—</span>';
+  return Math.round(v).toLocaleString() + '<small> COP/kWh</small>';
+}
+
+const statusMap = {
+  approved: ['st-approved','✔ Approved'],
+  pending:  ['st-pending', '● Pending'],
+  declined: ['st-declined','✕ Declined']
+};
+
+// ── RENDER TABLE ──────────────────────────────────────────────────────────────
+function renderTable() {
+  let data = projects.filter(p => {
+    const mf = activeFilter==='all' ||
+      (activeFilter==='layout'      && p.layout && !p.sim && !p.eng) ||
+      (activeFilter==='simulation'  && p.sim) ||
+      (activeFilter==='engineering' && p.eng);
+    const q = searchQ.toLowerCase();
+    const ms = !q || p.name.toLowerCase().includes(q) || (p.client||'').toLowerCase().includes(q);
+    return mf && ms;
+  });
+
+  if(sortCol>=0) {
+    const keys=['name','client','year','mw','mwh','pr','roi','capex','npv','lcoe','layout','sim','eng','status'];
+    data.sort((a,b)=>{
+      let av=a[keys[sortCol]], bv=b[keys[sortCol]];
+      if(av==null) av=sortDir>0?Infinity:-Infinity;
+      if(bv==null) bv=sortDir>0?Infinity:-Infinity;
+      return typeof av==='string' ? av.localeCompare(bv)*sortDir : (av-bv)*sortDir;
+    });
+  }
+
+  document.getElementById('tCount').textContent = data.length+' of '+projects.length;
+  document.getElementById('tBody').innerHTML = data.map(p => {
+    const [sc,sl] = statusMap[p.status]||statusMap.pending;
+    const actBadge = v => v
+      ? '<span class="act act-done">✓</span>'
+      : '<span class="act act-none">—</span>';
+    return `<tr>
+      <td class="td-name">${p.name}</td>
+      <td>${p.client||'<span class="td-null">—</span>'}</td>
+      <td>${p.year}</td>
+      <td>${fmtCap(p.mw)}</td>
+      <td>${fmtN(p.mwh)}</td>
+      <td>${p.pr!=null?fmtN(p.pr)+'%':'<span class="td-null">—</span>'}</td>
+      <td>${p.roi!=null?p.roi+' yr':'<span class="td-null">—</span>'}</td>
+      <td>${fmtCapex(p.capex)}</td>
+      <td>${fmtNPV(p.capex, p.mwh)}</td>
+      <td>${fmtLCOE(p.capex, p.mwh)}</td>
+      <td style="text-align:center">${actBadge(p.layout)}</td>
+      <td style="text-align:center">${actBadge(p.sim)}</td>
+      <td style="text-align:center">${actBadge(p.eng)}</td>
+      <td><span class="st-tag ${sc}">${sl}</span></td>
+      <td><button class="row-edit" onclick="editProject(event,${projects.indexOf(p)})" title="Edit">✏</button></td>
+    </tr>`;
+  }).join('');
+}
+
+function filterTable(f,btn) {
+  activeFilter=f;
+  document.querySelectorAll('.f-btn').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+  renderTable();
+}
+function searchTable(q) { searchQ=q; renderTable(); }
+function sortTable(col) { sortCol===col?sortDir*=-1:(sortCol=col,sortDir=1); renderTable(); }
+
+// ── UPDATE KPIs ───────────────────────────────────────────────────────────────
+function updateKPIs() {
+  const withMW  = projects.filter(p=>p.mw!=null);
+  const totalMW = withMW.reduce((s,p)=>s+p.mw,0);
+  const maxMW   = withMW.length ? Math.max(...withMW.map(p=>p.mw)) : 0;
+  const prs     = projects.filter(p=>p.pr!=null).map(p=>p.pr);
+  const avgPR   = prs.length ? prs.reduce((a,b)=>a+b,0)/prs.length : 0;
+  const totalMWh= projects.filter(p=>p.mwh!=null).reduce((s,p)=>s+p.mwh,0);
+  const co2     = totalMWh * CO2_FACTOR;
+  const clients = new Set(projects.map(p=>p.client).filter(c=>c&&c!=='—')).size;
+  const topClients = [...new Set(projects.map(p=>p.client).filter(c=>c&&c!=='—'))].slice(0,3).join(' · ');
+  const lcoeVals = projects.map(p=>calcLCOE(p.capex,p.mwh)).filter(v=>v!=null);
+  const avgLCOE  = lcoeVals.length ? lcoeVals.reduce((a,b)=>a+b,0)/lcoeVals.length : null;
+  const npvVals  = projects.map(p=>calcNPV(p.capex,p.mwh)).filter(v=>v!=null);
+  const totalNPV = npvVals.reduce((a,b)=>a+b,0);
+  const profCount= npvVals.filter(v=>v>=0).length;
+  const rois    = projects.filter(p=>p.roi!=null).map(p=>p.roi);
+  const avgROI  = rois.length ? (rois.reduce((a,b)=>a+b,0)/rois.length).toFixed(1) : null;
+  const roiRange= rois.length ? `${Math.min(...rois).toFixed(1)}–${Math.max(...rois).toFixed(1)} yr` : '—';
+
+  document.getElementById('k-mw').innerHTML      = totalMW.toFixed(1)+'<span class="kpi-unit">MWp</span>';
+  document.getElementById('k-mw-note').textContent= '↑ '+maxMW.toFixed(1)+' MWp single project';
+  document.getElementById('k-proj').innerHTML    = projects.length+'<span class="kpi-unit">proj</span>';
+  document.getElementById('k-entries').textContent= projects.length+' total entries';
+  document.getElementById('k-lcoe').innerHTML = avgLCOE!=null ? Math.round(avgLCOE).toLocaleString()+'<span class="kpi-unit">COP/kWh</span>' : '—<span class="kpi-unit" id="k-lcoe-unit">COP/kWh</span>';
+  document.getElementById('k-lcoe-note').textContent = avgLCOE!=null ? lcoeVals.length+' projects · r='+Math.round(LCOE_R*100)+'%, n='+LCOE_N+'yr' : 'Enter CAPEX to calculate';
+  document.getElementById('k-pr').innerHTML      = avgPR.toFixed(1)+'<span class="kpi-unit">%</span>';
+  document.getElementById('k-mwh').innerHTML     = Math.round(totalMWh).toLocaleString()+'<span class="kpi-unit">MWh</span>';
+
+  // ── Update Financial Summary Section ────────────────────────────────────────
+  // NPV Update
+  if (npvVals.length > 0) {
+    const sign = totalNPV >= 0 ? '+' : '';
+    const abs = Math.abs(totalNPV);
+    const str = abs >= 1000 ? (abs/1000).toFixed(1)+'B' : Math.round(abs).toLocaleString()+'M';
+    const finNpv = document.getElementById('fin-npv');
+    finNpv.textContent = sign+(totalNPV<0?'-':'')+'$'+str;
+    finNpv.classList.remove('positive','negative');
+    finNpv.classList.add(totalNPV >= 0 ? 'positive' : 'negative');
+    document.getElementById('fin-npv-sub').textContent = profCount+' of '+npvVals.length+' profitable';
+  } else {
+    document.getElementById('fin-npv').textContent = '—';
+    document.getElementById('fin-npv').classList.remove('positive','negative');
+    document.getElementById('fin-npv-sub').textContent = 'Enter CAPEX';
+  }
+
+  // Update Financial Summary - ROI
+  const finRoi = document.getElementById('fin-roi');
+  if(avgROI) {
+    finRoi.textContent = '~'+avgROI;
+    finRoi.classList.remove('good','medium','poor');
+    finRoi.classList.add(avgROI>3?'good':avgROI>=2?'medium':'poor');
+    document.getElementById('fin-roi-sub').textContent = 'Range '+roiRange;
+  } else {
+    finRoi.textContent = '—';
+    finRoi.classList.remove('good','medium','poor');
+    document.getElementById('fin-roi-sub').textContent = 'No data';
+  }
+
+  // Update Financial Summary - Profitability
+  const finProf = document.getElementById('fin-prof');
+  if(npvVals.length > 0) {
+    finProf.textContent = profCount+'/'+npvVals.length;
+    finProf.classList.remove('positive','negative');
+    finProf.classList.add(profCount > npvVals.length/2 ? 'positive' : 'negative');
+    document.getElementById('fin-prof-sub').textContent = 'Positive NPV';
+  } else {
+    finProf.textContent = '—';
+    finProf.classList.remove('positive','negative');
+    document.getElementById('fin-prof-sub').textContent = 'Need CAPEX';
+  }
+
+  // ── EPC BUSINESS METRICS (15% PROFIT MARGIN) ───────────────────────────────
+  try {
+    const appr = projects.filter(p=>p.status==='approved'&&p.capex!=null);
+    const capex = appr.reduce((s,p)=>s+(p.capex||0),0);
+    const profit = capex * 0.15;
+    const rev = capex + profit;
+    const fmt = (v) => v===0 ? '—' : '$'+(Math.abs(v)>=1000?(Math.abs(v)/1000).toFixed(1)+'B':Math.round(Math.abs(v))+'M');
+    document.getElementById('epc-capex').textContent = fmt(capex);
+    document.getElementById('epc-capex').classList.add(capex > 0 ? 'positive' : 'negative');
+    document.getElementById('epc-capex-sub').textContent = appr.length+' approved';
+    document.getElementById('epc-profit').textContent = fmt(profit);
+    document.getElementById('epc-profit').classList.add(profit > 0 ? 'good' : 'negative');
+    document.getElementById('epc-profit-sub').textContent = '15% margin';
+    document.getElementById('epc-gross').textContent = fmt(rev);
+    document.getElementById('epc-gross').classList.add(rev > 0 ? 'positive' : 'negative');
+    document.getElementById('epc-gross-sub').textContent = appr.length+' projects';
+  } catch(e) { console.error('EPC metrics:', e); }
+
+  // ── Dynamic CV bullets (auto-update with project data) ────────────────────
+  const clientSet = [...new Set(projects.map(p=>p.client).filter(c=>c&&c!=='—'))];
+  const approvedN = projects.filter(p=>p.status==='approved').length;
+  const simN      = projects.filter(p=>p.sim).length;
+  const engN      = projects.filter(p=>p.eng).length;
+  const mwhStr    = totalMWh > 0 ? Math.round(totalMWh).toLocaleString() : '—';
+  const co2Str    = Math.round(co2).toLocaleString();
+  const avgLCOEval= lcoeVals.length ? Math.round(lcoeVals.reduce((a,b)=>a+b,0)/lcoeVals.length) : null;
+  const roiMin    = rois.length ? Math.min(...rois).toFixed(1) : null;
+  const roiMax    = rois.length ? Math.max(...rois).toFixed(1) : null;
+
+  // Technical bullet
+  document.getElementById('cv-tech-bullet').innerHTML =
+    `Led the full pre-construction pipeline for <strong>${projects.length} C&amp;I solar projects</strong> — `+
+    `<strong>${totalMW.toFixed(1)} MWp</strong> designed across ${clientSet.length} corporate clients in Colombia — `+
+    `independently executing site surveys, capacity layouts (AutoCAD), PVsyst energy simulations `+
+    `(avg PR <strong>${avgPR.toFixed(1)}%</strong>), and detailed electrical designs (AutoCAD); `+
+    `<strong>${approvedN} contracts signed</strong> out of ${simN} proposals delivered, `+
+    `${engN} projects fully designed to construction-ready level.`;
+
+  // Financial bullet
+  const roiStr  = roiMin ? `avg payback <strong>${roiMin}–${roiMax} yr</strong>` : 'payback data pending CAPEX entry';
+  const lcoeNote= avgLCOEval ? `, avg LCOE <strong>${avgLCOEval.toLocaleString()} COP/kWh</strong>` : '';
+  const npvNote = npvVals.length ? ` — portfolio NPV <strong>${
+    (()=>{ const a=Math.abs(totalNPV); return (totalNPV>=0?'+':'-')+'$'+(a>=1000?(a/1000).toFixed(1)+'B':Math.round(a)+'M')+' COP'; })()
+  }</strong> at TIR ${Math.round(NPV_TIR*100)}%` : '';
+
+  document.getElementById('cv-fin-bullet').innerHTML =
+    `Built CAPEX and financial models validating investment viability for ${simN} C&amp;I solar proposals — `+
+    `${roiStr}${lcoeNote}${npvNote}; enabled <strong>${clientSet.length} corporate clients</strong> — `+
+    `including ${clientSet.slice(0,3).join(', ')} — `+
+    `to make data-driven solar investment decisions based on bankable engineering and financial analysis.`;
+
+  // Environmental bullet
+  document.getElementById('cv-env-bullet').innerHTML =
+    `Contributed to Colombia's energy transition by delivering <strong>${mwhStr} MWh/yr</strong> of clean generation capacity — `+
+    `avoiding <strong><span id="cv-co2">${co2Str} tCO₂/yr</span></strong> in carbon emissions `+
+    `(UPME grid factor: 0.1766 tCO₂/MWh) across <strong>${approvedN} approved projects</strong>; `+
+    `direct alignment with Bavaria, Yanbal, D1 and other clients' ESG commitments and energy cost-reduction targets `+
+    `in the Colombian C&amp;I solar market.`;
+
+  // ── Update Portfolio Summary Box ────────────────────────────────────────────
+  const approvedMW = projects.filter(p=>p.status==='approved'&&p.mw!=null).reduce((s,p)=>s+p.mw,0);
+  const withCapex  = projects.filter(p=>p.capex!=null);
+  const avgCapex   = withCapex.length ? (withCapex.reduce((s,p)=>s+p.capex,0)/withCapex.length).toFixed(1) : null;
+
+  document.getElementById('sum-projects').textContent = projects.length;
+  document.getElementById('sum-mwp').textContent = totalMW.toFixed(1);
+  document.getElementById('sum-mwh').textContent = Math.round(totalMWh).toLocaleString();
+  document.getElementById('sum-approved-mw').textContent = approvedMW.toFixed(1);
+  document.getElementById('sum-co2').textContent = Math.round(co2).toLocaleString();
+  document.getElementById('sum-avg-capex').textContent = avgCapex ? avgCapex : '—';
+}
+
+// ── FUNNEL ────────────────────────────────────────────────────────────────────
+function renderFunnel() {
+  const total     = projects.length;
+  const withSim   = projects.filter(p=>p.sim).length;
+  const approved  = projects.filter(p=>p.status==='approved').length;
+  const fullDesign= projects.filter(p=>p.eng).length;
+  const rate      = withSim>0 ? Math.round(approved/withSim*100) : 0;
+  const approvedMW= projects.filter(p=>p.status==='approved'&&p.mw!=null).reduce((s,p)=>s+p.mw,0);
+
+  document.getElementById('funnelCard').innerHTML = `
+    <div class="f-step">
+      <div class="f-num">${total}</div>
+      <div class="f-label">Site Surveys</div>
+      <div class="f-sub">Capacity layouts done</div>
+    </div>
+    <div class="f-step">
+      <div class="f-num">${withSim}</div>
+      <div class="f-label">Proposals Delivered</div>
+      <div class="f-sub">PVsyst + CAPEX presented</div>
+    </div>
+    <div class="f-step">
+      <div class="f-num" style="color:var(--emerald)">${approved}</div>
+      <div class="f-label">Contracts Signed</div>
+      <div class="f-sub">${approvedMW.toFixed(1)} MWp contracted</div>
+      <div class="f-rate">↑ ${rate}% conversion rate</div>
+    </div>
+    <div class="f-step">
+      <div class="f-num" style="color:var(--n500)">${fullDesign}</div>
+      <div class="f-label">Fully Designed</div>
+      <div class="f-sub">Detail engineering delivered</div>
+    </div>`;
+}
+
+// ── CHARTS ────────────────────────────────────────────────────────────────────
+const navy=getComputedStyle(document.documentElement).getPropertyValue('--n500').trim()||'#1E5FAD';
+const COLORS = { navy:'#1E5FAD', cyan:'#00C2E0', emerald:'#00C896', amber:'#F5A623', violet:'#7B61FF', rose:'#F56565' };
+const gridC = '#EEF2F7';
+
+const actChart = new Chart(document.getElementById('chartActivity'), {
+  type:'bar',
+  data:{
+    labels:['Layout Only','PVsyst & CAPEX','Detail Eng.'],
+    datasets:[{
+      label:'Projects',
+      data:[0,0,0],
+      backgroundColor:[COLORS.cyan, COLORS.violet, COLORS.emerald],
+      borderRadius:6
+    }]
+  },
+  options:{
+    responsive:true, maintainAspectRatio:false,
+    plugins:{
+      legend:{display:false},
+      tooltip:{
+        callbacks:{
+          label:ctx=>`${ctx.label}: ${ctx.parsed.y} project${ctx.parsed.y!==1?'s':''}`
+        }
+      }
+    },
+    scales:{
+      y:{grid:{color:gridC}, ticks:{font:{size:10}}, beginAtZero:true},
+      x:{grid:{display:false}, ticks:{font:{size:10}}}
+    }
+  },
+  plugins:[{
+    id:'barLabels',
+    afterDatasetsDraw(chart){
+      const {ctx,data,chartArea:{left,top,width,height}}=chart;
+      data.datasets.forEach((ds,di)=>{
+        const meta=chart.getDatasetMeta(di);
+        meta.data.forEach((bar,i)=>{
+          const val=ds.data[i];
+          ctx.font='bold 10px sans-serif';
+          ctx.fillStyle='#1E5FAD';
+          ctx.textAlign='center';
+          ctx.textBaseline='bottom';
+          ctx.fillText(val,bar.x,bar.y-5);
+        });
+      });
+    }
+  }]
+});
+
+const clientsChart = new Chart(document.getElementById('chartClients'), {
+  type:'doughnut',
+  data:{
+    labels:[],
+    datasets:[{data:[], backgroundColor:[COLORS.emerald,COLORS.cyan,COLORS.violet,COLORS.amber,COLORS.navy], borderWidth:0, hoverOffset:8}]
+  },
+  options:{
+    responsive:true, maintainAspectRatio:false, cutout:'65%',
+    plugins:{
+      legend:{position:'bottom',labels:{font:{size:10},boxWidth:12,padding:10}},
+      tooltip:{
+        callbacks:{
+          label:ctx=>{
+            const total=ctx.dataset.data.reduce((a,b)=>a+b,0);
+            const val=ctx.parsed;
+            const pct=total>0?Math.round(val/total*100):0;
+            return `${ctx.label}: ${val} (${pct}%)`;
+          }
+        }
+      }
+    }
+  }
+});
+
+const statusChart = new Chart(document.getElementById('chartStatus'), {
+  type:'doughnut',
+  data:{
+    labels:['Approved','Pending','Declined'],
+    datasets:[{data:[0,0,0], backgroundColor:[COLORS.emerald,COLORS.amber,COLORS.rose], borderWidth:0, hoverOffset:8}]
+  },
+  options:{
+    responsive:true, maintainAspectRatio:false, cutout:'65%',
+    plugins:{
+      legend:{position:'bottom',labels:{font:{size:11},boxWidth:12,padding:12}},
+      tooltip:{
+        callbacks:{
+          label:ctx=>{
+            const total=ctx.dataset.data.reduce((a,b)=>a+b,0);
+            const val=ctx.parsed;
+            const pct=total>0?Math.round(val/total*100):0;
+            return `${ctx.label}: ${val} (${pct}%)`;
+          }
+        }
+      }
+    }
+  }
+});
+
+function updateCharts() {
+  // ── ACTIVITY & WIN RATE ────────────────────────────────────────────────────
+  const layoutOnly= projects.filter(p=>p.layout&&!p.sim&&!p.eng).length;
+  const simDone   = projects.filter(p=>p.sim).length;
+  const engDone   = projects.filter(p=>p.eng).length;
+  const appr      = projects.filter(p=>p.status==='approved').length;
+  const pend      = projects.filter(p=>p.status==='pending').length;
+  const decl      = projects.filter(p=>p.status==='declined').length;
+  const totalProj = projects.length;
+
+  actChart.data.datasets[0].data = [layoutOnly, simDone, engDone];
+  actChart.update();
+
+  // Win rate: approved / total
+  const winRate = totalProj > 0 ? Math.round(appr/totalProj*100) : 0;
+  document.getElementById('winRatePercent').textContent = winRate + '%';
+  document.getElementById('actTableLayout').textContent = layoutOnly;
+  document.getElementById('actTableSim').textContent = simDone;
+  document.getElementById('actTableEng').textContent = engDone;
+  document.getElementById('actTableApproved').textContent = appr;
+
+  // ── CLIENT DIVERSIFICATION ─────────────────────────────────────────────────
+  const clientMap = {};
+  projects.forEach(p=>{
+    if(p.client && p.client!=='—') {
+      clientMap[p.client] = (clientMap[p.client]||0) + 1;
+    }
+  });
+  const clientList = Object.entries(clientMap).sort((a,b)=>b[1]-a[1]).slice(0,5);
+  const clientLabels = clientList.map(([name])=>name.length>12?name.substring(0,12)+'…':name);
+  const clientData = clientList.map(([,count])=>count);
+
+  clientsChart.data.labels = clientLabels;
+  clientsChart.data.datasets[0].data = clientData;
+  clientsChart.update();
+
+  // Concentration: % of largest client
+  const topClientCount = clientList.length > 0 ? clientList[0][1] : 0;
+  const concentration = totalProj > 0 ? Math.round(topClientCount/totalProj*100) : 0;
+  const uniqueClients = Object.keys(clientMap).length;
+
+  document.getElementById('clientsCount').textContent = uniqueClients + ' clients';
+  document.getElementById('clientsConc').textContent = concentration + '% (top)';
+  document.getElementById('clientsDiv').textContent = concentration <= 30 ? '✓ Healthy' : concentration <= 50 ? '⚠ Moderate' : '✗ High';
+
+  // ── PROJECT SUCCESS RATE ───────────────────────────────────────────────────
+  statusChart.data.datasets[0].data = [appr, pend, decl];
+  statusChart.update();
+
+  const successRate = totalProj > 0 ? Math.round(appr/totalProj*100) : 0;
+  document.getElementById('successRate').textContent = successRate + '%';
+  document.getElementById('stTableAppr').textContent = appr + ` (${totalProj>0?Math.round(appr/totalProj*100):0}%)`;
+  document.getElementById('stTablePend').textContent = pend + ` (${totalProj>0?Math.round(pend/totalProj*100):0}%)`;
+  document.getElementById('stTableDecl').textContent = decl + ` (${totalProj>0?Math.round(decl/totalProj*100):0}%)`;
+}
+
+// ── MODAL ─────────────────────────────────────────────────────────────────────
+
+
+document.getElementById('f-layout').addEventListener('change',()=>syncCheckRow('row-layout','f-layout'));
+document.getElementById('f-sim').addEventListener('change',()=>syncCheckRow('row-sim','f-sim'));
+document.getElementById('f-eng').addEventListener('change',()=>syncCheckRow('row-eng','f-eng'));
+
+
+
+function saveProject(e) {
+  e.preventDefault();
+  const g  = id => { const v=document.getElementById(id).value.trim(); return v===''?null:v; };
+  const gf = id => { const v=document.getElementById(id).value; return v===''?null:parseFloat(v); };
+  const p = {
+    name: g('f-name'), client: g('f-client'),
+    year: parseInt(document.getElementById('f-year').value),
+    mw: gf('f-mw'), mwh: gf('f-mwh'), pr: gf('f-pr'), roi: gf('f-roi'),
+    capex: gf('f-capex'),
+    status: g('f-status')||'pending',
+    layout: document.getElementById('f-layout').checked,
+    sim:    document.getElementById('f-sim').checked,
+    eng:    document.getElementById('f-eng').checked,
+  };
+  const idx = parseInt(document.getElementById('f-idx').value);
+  idx>=0 ? projects[idx]=p : projects.unshift(p);
+  persistProjects();
+  renderTable(); updateKPIs(); renderFunnel(); updateCharts();
+  closeModal();
+  showToast(idx>=0?'✓ Project updated':'✓ Project added');
+}
+
+
+
+// ── COPY BULLETS ──────────────────────────────────────────────────────────────
+function copyBullet(el) {
+  navigator.clipboard.writeText(el.innerText.trim()).then(()=>{
+    el.classList.add('copied');
+    setTimeout(()=>el.classList.remove('copied'),1500);
+    showToast('✓ Copied to clipboard');
+  });
+}
+
+// ── TOAST ─────────────────────────────────────────────────────────────────────
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2200);
+}
+
+// ── SHARE (read-only export) ──────────────────────────────────────────────────
+
+
+
+// ── LCOE ASSUMPTIONS ─────────────────────────────────────────────────────────
+
+
+
+
+
+// ── PUBLISH TO PUBLIC DASHBOARD ───────────────────────────────────────────────
+
+const SUPABASE_URL = 'https://qttxnlrkyncylavmhbas.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF0dHhubHJreW5jeWxhdm1oYmFzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3NDgwMTEsImV4cCI6MjA5MDMyNDAxMX0.xdee1jFsyl2PxNufXQqWzpU2eqZRf1nv7SPq7MVWkJw';
+
+async 
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+console.log('INIT: Starting...', projects.length, 'projects loaded');
+try { renderTable(); console.log('✓ renderTable done'); } catch(e) { console.error('✗ renderTable error:', e); }
+try { updateKPIs(); console.log('✓ updateKPIs done'); } catch(e) { console.error('✗ updateKPIs error:', e); }
+try { renderFunnel(); console.log('✓ renderFunnel done'); } catch(e) { console.error('✗ renderFunnel error:', e); }
+try { updateCharts(); console.log('✓ updateCharts done'); } catch(e) { console.error('✗ updateCharts error:', e); }
+console.log('INIT: Complete');
+</script>
+
+<!-- LCOE ASSUMPTIONS MODAL -->
+<div class="modal-overlay" id="lcoeOverlay" onclick="if(event.target===this)document.getElementById('lcoeOverlay').classList.remove('open')">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-header">
+      <div class="modal-title">Financial Assumptions (LCOE & NPV)</div>
+      <button class="modal-close" onclick="document.getElementById('lcoeOverlay').classList.remove('open')">✕</button>
+    </div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:20px;line-height:1.6;background:var(--bg);padding:12px;border-radius:8px">
+      <strong>Formula:</strong> LCOE = (CAPEX + OPEX<sub>yr</sub> × AF) / (MWh<sub>yr</sub> × AF × 1,000)<br>
+      <strong>AF</strong> = annuity factor = (1−(1+r)<sup>−n</sup>) / r<br>
+      <strong>Result</strong> in COP/kWh
+    </div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label class="form-label">Discount Rate (%)</label>
+        <input class="form-input" id="la-r" type="number" step="0.1" min="1" max="30" value="10">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Project Lifetime (yr)</label>
+        <input class="form-input" id="la-n" type="number" step="1" min="10" max="35" value="25">
+      </div>
+      <div class="form-group full">
+        <label class="form-label">Annual OPEX (% of CAPEX)</label>
+        <input class="form-input" id="la-opex" type="number" step="0.1" min="0" max="10" value="1.5">
+      </div>
+      <div class="form-group full" style="margin-top:8px;padding-top:16px;border-top:1px solid var(--border)">
+        <label class="form-label" style="color:var(--amber);font-size:10px">NPV / Profitability</label>
+      </div>
+      <div class="form-group">
+        <label class="form-label">TIR / Discount Rate (%)</label>
+        <input class="form-input" id="la-tir" type="number" step="1" min="1" max="60" value="25">
+        <span class="form-hint">Default: 25% (Colombian C&I solar benchmark)</span>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Electricity Tariff (COP/kWh)</label>
+        <input class="form-input" id="la-tariff" type="number" step="10" min="100" max="2000" value="1100">
+        <span class="form-hint">Colombian commercial avg ~600–700 COP/kWh</span>
+      </div>
+    </div>
+    <div class="form-actions">
+      <button type="button" class="btn-cancel" onclick="document.getElementById('lcoeOverlay').classList.remove('open')">Cancel</button>
+      <button type="button" class="btn-save" onclick="applyLCOEAssumptions()">Apply</button>
+    </div>
+  </div>
+</div>
 
 </body>
 </html>
